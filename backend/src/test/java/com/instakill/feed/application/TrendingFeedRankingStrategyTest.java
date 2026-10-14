@@ -1,6 +1,8 @@
 package com.instakill.feed.application;
 
 import com.instakill.feed.domain.FeedSort;
+import com.instakill.feed.domain.NewestFeedRankingStrategy;
+import com.instakill.feed.domain.TrendingFeedRankingStrategy;
 import com.instakill.post.domain.Post;
 import com.instakill.post.domain.PostRepository;
 import org.junit.jupiter.api.Test;
@@ -17,7 +19,13 @@ import static org.mockito.Mockito.when;
 class FeedServiceTest {
 
     private final PostRepository repository = Mockito.mock(PostRepository.class);
-    private final FeedService service = new FeedService(repository);
+
+    // Instantiate the real strategies to test the actual sorting logic
+    private final NewestFeedRankingStrategy newestStrategy = new NewestFeedRankingStrategy();
+    private final TrendingFeedRankingStrategy trendingStrategy = new TrendingFeedRankingStrategy();
+
+    // Inject the strategies into the FeedService constructor
+    private final FeedService service = new FeedService(repository, List.of(newestStrategy, trendingStrategy));
 
     @Test
     void sortsTrendingFeedByLikesThenCommentsThenRecency() {
@@ -39,7 +47,7 @@ class FeedServiceTest {
                         tuple(5L, 1L)
                 );
     }
-    
+
     @Test
     void returnsNewestFeedInCorrectOrder() {
         List<Post> posts = List.of(
@@ -53,7 +61,7 @@ class FeedServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result).isEqualTo(posts);
     }
-    
+
     @Test
     void defaultsToNewWhenSortIsNull() {
         List<Post> posts = List.of(post(Instant.now(), 1, 1));
