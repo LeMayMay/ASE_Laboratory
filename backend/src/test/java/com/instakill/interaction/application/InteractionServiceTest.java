@@ -3,7 +3,9 @@ package com.instakill.interaction.application;
 import com.instakill.common.clock.Clock;
 import com.instakill.common.id.IdGenerator;
 import com.instakill.interaction.domain.CommentRepository;
+import com.instakill.interaction.domain.DomainEventPublisher;
 import com.instakill.interaction.domain.Like;
+import com.instakill.interaction.domain.LikeCreatedEvent;
 import com.instakill.interaction.domain.LikeRepository;
 import com.instakill.post.domain.Post;
 import com.instakill.post.domain.PostRepository;
@@ -25,6 +27,7 @@ class InteractionServiceTest {
     private final PostRepository postRepository = mock(PostRepository.class);
     private final IdGenerator idGenerator = mock(IdGenerator.class);
     private final Clock clock = mock(Clock.class);
+    private final DomainEventPublisher eventPublisher = mock(DomainEventPublisher.class); // Added mock
 
     private InteractionService service;
     private final UUID postId = UUID.randomUUID();
@@ -33,7 +36,8 @@ class InteractionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new InteractionService(commentRepository, likeRepository, postRepository, idGenerator, clock);
+        // Updated constructor to include eventPublisher
+        service = new InteractionService(commentRepository, likeRepository, postRepository, idGenerator, clock, eventPublisher);
         when(postRepository.findById(postId)).thenReturn(Optional.of(post));
         when(clock.now()).thenReturn(Instant.parse("2024-01-01T00:00:00Z"));
     }
@@ -53,6 +57,14 @@ class InteractionServiceTest {
         verify(postRepository).save(postCaptor.capture());
         assertThat(postCaptor.getValue().likeCount()).isEqualTo(1);
         assertThat(postCaptor.getValue().updatedAt()).isEqualTo(clock.now());
+
+        // Verify that the LikeCreatedEvent is published correctly
+        ArgumentCaptor<LikeCreatedEvent> eventCaptor = ArgumentCaptor.forClass(LikeCreatedEvent.class);
+        verify(eventPublisher).publish(eventCaptor.capture());
+        LikeCreatedEvent capturedEvent = eventCaptor.getValue();
+        assertThat(capturedEvent.postId()).isEqualTo(postId);
+        assertThat(capturedEvent.userId()).isEqualTo(userId);
+        assertThat(capturedEvent.occurredAt()).isEqualTo(Instant.parse("2024-01-01T00:00:00Z"));
     }
 
     @Test
@@ -70,5 +82,7 @@ class InteractionServiceTest {
         verify(postRepository).save(postCaptor.capture());
         assertThat(postCaptor.getValue().likeCount()).isZero();
 
+        // Verify that no event is published when a like is removed
+        verify(eventPublisher, never()).publish(any());
     }
 }
