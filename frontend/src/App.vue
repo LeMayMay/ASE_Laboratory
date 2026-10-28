@@ -59,7 +59,7 @@
           <p v-if="uploadError" class="error">{{ uploadError }}</p>
 
           <div v-if="composer.imageUrl" class="composer-media-preview">
-            <video v-if="isVideo(composer.imageUrl)" controls :src="composer.imageUrl"></video>
+            <video v-if="isVideoUrl(composer.imageUrl)" controls :src="composer.imageUrl"></video>
             <img v-else :src="composer.imageUrl" alt="Media preview">
           </div>
 
@@ -90,7 +90,7 @@
           </header>
           <p>{{ post.content }}</p>
           <div v-if="post.imageUrl" class="post-media">
-            <video v-if="isVideo(post.imageUrl)" controls :src="post.imageUrl"></video>
+            <video v-if="isVideoUrl(post.imageUrl)" controls :src="post.imageUrl"></video>
             <img v-else :src="post.imageUrl" alt="post image">
           </div>
           
@@ -130,7 +130,9 @@
 
 <script setup>
 import { onMounted, reactive, ref, computed } from 'vue'
-import { createPost, fetchMe, listFeed, login, register as registerUser, toggleLike, listComments, addComment, uploadMedia } from './api'
+import { createPost, fetchMe, listFeed, login, register as registerUser, toggleLike, listComments, addComment } from './api'
+import { isVideoUrl } from './utils/mediaUtils'
+import { useMediaUpload } from './composables/useMediaUpload'
 
 const user = ref(null)
 const posts = ref([])
@@ -139,42 +141,25 @@ const authMode = ref('login')
 const error = ref('')
 const authForm = reactive({ username: '', email: '', password: '', usernameOrEmail: '' })
 const composer = reactive({ content: '', imageUrl: '' })
-const fileInputRef = ref(null)
-const uploading = ref(false)
-const uploadError = ref('')
-const isUploadedMedia = ref(false)
-const isMediaUrlReadonly = computed(() => isUploadedMedia.value || (Boolean(composer.imageUrl) && composer.imageUrl.startsWith('/media/')))
 
-function isVideo(url) {
-  if (!url) return false
-  const clean = url.split('?')[0].toLowerCase()
-  return clean.endsWith('.mp4') || clean.endsWith('.mov') || clean.endsWith('.webm') || clean.endsWith('.mkv')
-}
+// Media upload composable (Composition Pattern)
+const {
+  fileInputRef,
+  uploading,
+  uploadError,
+  isMediaReadonly,
+  handleFileChange,
+  clearMedia: resetMediaUpload
+} = useMediaUpload((mediaUrl) => {
+  composer.imageUrl = mediaUrl
+})
 
-async function handleFileChange(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  uploading.value = true
-  uploadError.value = ''
-  try {
-    const res = await uploadMedia(file)
-    composer.imageUrl = res.mediaUrl
-    isUploadedMedia.value = true
-  } catch (e) {
-    uploadError.value = e.response?.data?.detail || e.response?.data?.message || 'Failed to upload media'
-  } finally {
-    uploading.value = false
-  }
-}
+const isMediaUrlReadonly = computed(() => isMediaReadonly(composer.imageUrl))
 
 function clearMedia() {
-  composer.imageUrl = ''
-  uploadError.value = ''
-  isUploadedMedia.value = false
-  if (fileInputRef.value) {
-    fileInputRef.value.value = ''
-  }
+  resetMediaUpload(() => {
+    composer.imageUrl = ''
+  })
 }
 
 // Comments state

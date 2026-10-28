@@ -1,6 +1,6 @@
 package com.instakill.infrastructure.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.instakill.media.infrastructure.MediaProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -11,15 +11,15 @@ import java.nio.file.Paths;
 @Configuration
 public class MediaWebMvcConfig implements WebMvcConfigurer {
 
-    private final String mediaBasePath;
+    private final MediaProperties mediaProperties;
 
-    public MediaWebMvcConfig(@Value("${media.base-path:media}") String mediaBasePath) {
-        this.mediaBasePath = mediaBasePath;
+    public MediaWebMvcConfig(MediaProperties mediaProperties) {
+        this.mediaProperties = mediaProperties;
     }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        Path path = Paths.get(mediaBasePath).toAbsolutePath().normalize();
+        Path path = Paths.get(mediaProperties.basePath()).toAbsolutePath().normalize();
         String location = path.toUri().toString();
         if (!location.endsWith("/")) {
             location += "/";
