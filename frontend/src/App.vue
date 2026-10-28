@@ -27,9 +27,44 @@
       <section v-else class="feed">
         <form @submit.prevent="createNewPost" class="card form composer">
           <textarea v-model="composer.content" rows="3" placeholder="Share something..." required></textarea>
-          <input v-model="composer.imageUrl" placeholder="Image URL (optional)">
+          
+          <div class="media-input-group">
+            <label class="file-upload-btn">
+              <span>{{ uploading ? 'Uploading...' : 'Choose File' }}</span>
+              <input
+                type="file"
+                ref="fileInputRef"
+                @change="handleFileChange"
+                :disabled="uploading"
+                accept="image/*,video/*"
+              >
+            </label>
+            <input
+              v-model="composer.imageUrl"
+              :placeholder="isMediaUrlReadonly ? 'Uploaded media URL' : 'Or paste image/video URL (optional)'"
+              :disabled="uploading"
+              :readonly="isMediaUrlReadonly"
+              :class="{ 'readonly-input': isMediaUrlReadonly }"
+            >
+            <button
+              v-if="composer.imageUrl"
+              type="button"
+              class="clear-media-btn"
+              @click="clearMedia"
+            >
+              Clear
+            </button>
+          </div>
+
+          <p v-if="uploadError" class="error">{{ uploadError }}</p>
+
+          <div v-if="composer.imageUrl" class="composer-media-preview">
+            <video v-if="isVideoUrl(composer.imageUrl)" controls :src="composer.imageUrl"></video>
+            <img v-else :src="composer.imageUrl" alt="Media preview">
+          </div>
+
           <div class="actions">
-            <button type="submit">Post</button>
+            <button type="submit" :disabled="uploading">Post</button>
           </div>
         </form>
 
@@ -54,7 +89,10 @@
             </div>
           </header>
           <p>{{ post.content }}</p>
-          <img v-if="post.imageUrl" :src="post.imageUrl" alt="post image">
+          <div v-if="post.imageUrl" class="post-media">
+            <video v-if="isVideoUrl(post.imageUrl)" controls :src="post.imageUrl"></video>
+            <img v-else :src="post.imageUrl" alt="post image">
+          </div>
           
           <!-- Comments Section -->
           <section class="comments">
@@ -91,8 +129,10 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { createPost, fetchMe, listFeed, login, register as registerUser, toggleLike, listComments, addComment } from './api'
+import { isVideoUrl } from './utils/mediaUtils'
+import { useMediaUpload } from './composables/useMediaUpload'
 
 const user = ref(null)
 const posts = ref([])
@@ -101,6 +141,26 @@ const authMode = ref('login')
 const error = ref('')
 const authForm = reactive({ username: '', email: '', password: '', usernameOrEmail: '' })
 const composer = reactive({ content: '', imageUrl: '' })
+
+// Media upload composable (Composition Pattern)
+const {
+  fileInputRef,
+  uploading,
+  uploadError,
+  isMediaReadonly,
+  handleFileChange,
+  clearMedia: resetMediaUpload
+} = useMediaUpload((mediaUrl) => {
+  composer.imageUrl = mediaUrl
+})
+
+const isMediaUrlReadonly = computed(() => isMediaReadonly(composer.imageUrl))
+
+function clearMedia() {
+  resetMediaUpload(() => {
+    composer.imageUrl = ''
+  })
+}
 
 // Comments state
 const comments = reactive({})
@@ -184,7 +244,7 @@ async function createNewPost() {
   if (!composer.content.trim()) return
   await createPost({ content: composer.content, imageUrl: composer.imageUrl || null })
   composer.content = ''
-  composer.imageUrl = ''
+  clearMedia()
   await loadFeed()
 }
 
@@ -327,7 +387,75 @@ async function logout() {
   margin-bottom: 0.75rem;
 }
 
-.post img {
+.media-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e5e7eb;
+  color: #1f2937;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.file-upload-btn:hover {
+  background: #d1d5db;
+}
+
+.file-upload-btn input[type="file"] {
+  display: none;
+}
+
+.clear-media-btn {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.readonly-input {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.composer-media-preview,
+.post-media {
+  margin-top: 0.75rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.composer-media-preview img,
+.composer-media-preview video,
+.post-media img,
+.post-media video {
+  max-width: 100%;
+  max-height: 480px;
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+
+.post img,
+.post video {
   margin-top: 0.75rem;
   width: 100%;
   border-radius: 12px;
