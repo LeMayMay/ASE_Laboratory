@@ -1,6 +1,9 @@
 package com.instakill.media.domain;
 
+import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Path;
 
 /**
  * Port interface for media storage operations (Hexagonal Architecture).
@@ -9,4 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 public interface MediaStorage {
 
     StoredMedia store(MultipartFile file);
+
+    Resource loadAsResource(String filename);
+
+    Path getRootLocation();
 }

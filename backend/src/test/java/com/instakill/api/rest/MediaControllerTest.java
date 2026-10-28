@@ -113,6 +113,49 @@ class MediaControllerTest {
     }
 
     @Test
+    void accessMediaByIdDirectly() throws Exception {
+        byte[] imageBytes = new byte[]{9, 8, 7, 6};
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "direct-access.png",
+                MediaType.IMAGE_PNG_VALUE,
+                imageBytes
+        );
+
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/media")
+                        .file(file)
+                        .cookie(authToken))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JsonNode json = objectMapper.readTree(uploadResult.getResponse().getContentAsString());
+        String mediaUrl = json.get("mediaUrl").asText(); // e.g. /media/<filename>
+        String filename = mediaUrl.substring("/media/".length());
+
+        // Access via /media/{ID} as stored in media folder
+        MvcResult getResult = mockMvc.perform(get("/media/" + filename))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(getResult.getResponse().getContentAsByteArray()).isEqualTo(imageBytes);
+        assertThat(getResult.getResponse().getContentType()).contains(MediaType.IMAGE_PNG_VALUE);
+
+        // Also test access via ID without extension
+        String idWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+        MvcResult getIdResult = mockMvc.perform(get("/media/" + idWithoutExt))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(getIdResult.getResponse().getContentAsByteArray()).isEqualTo(imageBytes);
+    }
+
+    @Test
+    void accessNonExistentMediaReturns404() throws Exception {
+        mockMvc.perform(get("/media/non-existent-media-file-12345.mp4"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void uploadEmptyFileFails() throws Exception {
         MockMultipartFile emptyFile = new MockMultipartFile(
                 "file",

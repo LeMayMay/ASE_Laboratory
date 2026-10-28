@@ -65,4 +65,15 @@ class MediaServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Unsupported or missing file extension");
     }
+
+    @Test
+    void loadAsResourceDelegatesToStorage() {
+        org.springframework.core.io.Resource mockResource = org.mockito.Mockito.mock(org.springframework.core.io.Resource.class);
+        when(mediaStorage.loadAsResource("sample.mp4")).thenReturn(mockResource);
+
+        org.springframework.core.io.Resource result = mediaService.loadAsResource("sample.mp4");
+
+        assertThat(result).isEqualTo(mockResource);
+        verify(mediaStorage).loadAsResource("sample.mp4");
+    }
 }
