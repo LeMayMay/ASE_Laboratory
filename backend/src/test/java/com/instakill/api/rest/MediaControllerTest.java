@@ -14,6 +14,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -82,6 +89,44 @@ class MediaControllerTest {
                 .andReturn();
 
         assertThat(serveResult.getResponse().getContentAsByteArray()).isEqualTo(imageBytes);
+    }
+
+    @Test
+    void uploadRealImageScalesToMaxWidth300AndAddsWatermark() throws Exception {
+        BufferedImage rawImage = new BufferedImage(800, 400, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = rawImage.createGraphics();
+        g.setColor(Color.BLUE);
+        g.fillRect(0, 0, 800, 400);
+        g.dispose();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(rawImage, "jpg", out);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "landscape.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                out.toByteArray()
+        );
+
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/media")
+                        .file(file)
+                        .cookie(authToken))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JsonNode json = objectMapper.readTree(uploadResult.getResponse().getContentAsString());
+        String mediaUrl = json.get("mediaUrl").asText();
+        assertThat(mediaUrl).startsWith("/media/").endsWith(".jpg");
+
+        MvcResult serveResult = mockMvc.perform(get(mediaUrl))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        BufferedImage servedImage = ImageIO.read(new ByteArrayInputStream(serveResult.getResponse().getContentAsByteArray()));
+        assertThat(servedImage).isNotNull();
+        assertThat(servedImage.getWidth()).isEqualTo(300);
+        assertThat(servedImage.getHeight()).isEqualTo(150);
     }
 
     @Test

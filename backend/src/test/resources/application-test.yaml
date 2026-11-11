@@ -19,3 +19,6 @@ instakill:
     ttl-minutes: 60
 media:
   base-path: build/test-media
+notification:
+  ntfy:
+    enabled: false

@@ -32,6 +32,7 @@ dependencies {
     implementation("org.hibernate.orm:hibernate-community-dialects:6.6.1.Final")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("net.coobird:thumbnailator:0.4.20")
     runtimeOnly("org.xerial:sqlite-jdbc:3.46.1.3")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

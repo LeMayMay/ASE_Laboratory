@@ -19,5 +19,6 @@ gradle/wrapper/
 **/gradle/wrapper/**
 **/.gradle/
 .temp/
-backend/media/*
-media/
+/backend/media/*
+!/backend/media/.gitkeep
+/media/

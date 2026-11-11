@@ -7,7 +7,12 @@ import com.instakill.common.id.IdGenerator;
 import com.instakill.feed.application.FeedService;
 import com.instakill.feed.domain.FeedSort;
 import com.instakill.post.domain.Post;
+import com.instakill.post.domain.PostCreatedEvent;
 import com.instakill.post.domain.PostRepository;
+import com.instakill.user.domain.User;
+import com.instakill.user.domain.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,15 +25,29 @@ import java.util.UUID;
 public class PostService {
 
     private final PostRepository posts;
+    private final UserRepository users;
     private final IdGenerator idGenerator;
     private final Clock clock;
     private final FeedService feedService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public PostService(PostRepository posts, IdGenerator idGenerator, Clock clock, FeedService feedService) {
+    @Autowired
+    public PostService(PostRepository posts,
+                       UserRepository users,
+                       IdGenerator idGenerator,
+                       Clock clock,
+                       FeedService feedService,
+                       ApplicationEventPublisher eventPublisher) {
         this.posts = posts;
+        this.users = users;
         this.idGenerator = idGenerator;
         this.clock = clock;
         this.feedService = feedService;
+        this.eventPublisher = eventPublisher;
+    }
+
+    public PostService(PostRepository posts, IdGenerator idGenerator, Clock clock, FeedService feedService) {
+        this(posts, null, idGenerator, clock, feedService, null);
     }
 
     @Transactional
@@ -44,7 +63,14 @@ public class PostService {
                 0L,
                 0L
         );
-        return posts.save(post);
+        Post saved = posts.save(post);
+        if (eventPublisher != null) {
+            String username = (users != null)
+                    ? users.findById(authorId).map(User::username).orElse("unknown")
+                    : "unknown";
+            eventPublisher.publishEvent(new PostCreatedEvent(saved.id(), username, saved.createdAt()));
+        }
+        return saved;
     }
 
     public Post getPost(UUID id) {
