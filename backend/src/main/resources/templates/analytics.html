@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:replace="~{layout :: layout('Analytics', ~{::section})}">
+    <section>
+        <h1>Analytics for @<span th:text="${username}">user</span></h1>
+
+        <div class="post">
+            <h2>5. Engagement Percentile Rank</h2>
+            <p>
+                Your posts rank in the <strong>top <span th:text="${#numbers.formatDecimal(analytics.engagementRank().topPercentage(), 1, 1)}">0.0</span>%</strong>
+                of users by average engagement
+                (Rank #<span th:text="${analytics.engagementRank().rank()}">1</span> of <span th:text="${analytics.engagementRank().totalUsers()}">1</span> users,
+                <span th:text="${#numbers.formatDecimal(analytics.engagementRank().averageEngagement(), 1, 2)}">0.00</span> avg engagement/post).
+            </p>
+        </div>
+
+        <div class="post">
+            <h2>3. Like-to-Comment Ratio (All Posts Combined)</h2>
+            <p>
+                <strong>Ratio:</strong> <span th:text="${#numbers.formatDecimal(analytics.likeCommentRatio().likeToCommentRatio(), 1, 2)}">0.00</span>
+                (<span th:text="${analytics.likeCommentRatio().totalLikes()}">0</span> likes /
+                <span th:text="${analytics.likeCommentRatio().totalComments()}">0</span> comments)
+            </p>
+        </div>
+
+        <div class="post">
+            <h2>4. Average Likes per Post by Media Type (Photos vs. Videos)</h2>
+            <ul>
+                <li th:each="stat : ${analytics.averageLikesByMediaType()}">
+                    <strong th:text="${stat.mediaType()}">PHOTO</strong>:
+                    <span th:text="${#numbers.formatDecimal(stat.averageLikes(), 1, 2)}">0.00</span> avg likes/post
+                    (<span th:text="${stat.totalLikes()}">0</span> likes across <span th:text="${stat.postCount()}">0</span> posts)
+                </li>
+            </ul>
+        </div>
+
+        <div class="post">
+            <h2>1. Total Posts, Likes, and Comments per Week</h2>
+            <p th:if="${#lists.isEmpty(analytics.weeklyActivity())}">No weekly post activity yet.</p>
+            <table th:if="${!#lists.isEmpty(analytics.weeklyActivity())}" style="width:100%; text-align:left; border-collapse:collapse;">
+                <thead>
+                <tr>
+                    <th>Week</th>
+                    <th>Posts</th>
+                    <th>Likes</th>
+                    <th>Comments</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="week : ${analytics.weeklyActivity()}">
+                    <td th:text="${week.week()}">2026-W45</td>
+                    <td th:text="${week.totalPosts()}">0</td>
+                    <td th:text="${week.totalLikes()}">0</td>
+                    <td th:text="${week.totalComments()}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="post">
+            <h2>2. Top 5 Posts by Engagement</h2>
+            <p th:if="${#lists.isEmpty(analytics.topPostsByEngagement())}">No posts yet.</p>
+            <ol th:if="${!#lists.isEmpty(analytics.topPostsByEngagement())}">
+                <li th:each="post : ${analytics.topPostsByEngagement()}">
+                    <strong th:text="${post.content()}">Post content</strong>
+                    — Engagement: <strong th:text="${post.engagement()}">0</strong>
+                    (<span th:text="${post.likeCount()}">0</span> likes, <span th:text="${post.commentCount()}">0</span> comments)
+                </li>
+            </ol>
+        </div>
+    </section>
+</div>
+</body>
+</html>

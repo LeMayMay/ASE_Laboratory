@@ -39,7 +39,7 @@ public class DataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (!userRepository.findAll().isEmpty()) {
+        if (userRepository.existsByUsername("alice") || !userRepository.findAll().isEmpty()) {
             return;
         }
         log.info("Seeding development data");

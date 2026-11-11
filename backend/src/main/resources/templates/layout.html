@@ -11,6 +11,7 @@
     <div class="nav-links">
         <a th:href="@{/feed}">Feed</a>
         <a th:href="@{/posts/new}">Create</a>
+        <a th:href="@{/analytics}">Analytics</a>
         <form th:action="@{/auth/logout}" method="post" class="logout-form">
             <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <button type="submit">Logout</button>
