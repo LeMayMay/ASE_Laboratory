@@ -21,13 +21,25 @@ import java.util.UUID;
 @Repository
 public class SqliteAnalyticsRepositoryAdapter implements AnalyticsRepository {
 
-    private static final String WEEKLY_ACTIVITY_SQL = """
+    private static final String WEEKLY_ACTIVITY_SQLITE_SQL = """
             SELECT
                 CASE
                     WHEN typeof(p.created_at) IN ('integer', 'real')
                         THEN strftime('%Y-W%W', p.created_at / 1000, 'unixepoch')
                     ELSE strftime('%Y-W%W', p.created_at)
                 END AS week,
+                COUNT(*) AS total_posts,
+                COALESCE(SUM(p.like_count), 0) AS total_likes,
+                COALESCE(SUM(p.comment_count), 0) AS total_comments
+            FROM posts p
+            WHERE p.author_id = ?
+            GROUP BY week
+            ORDER BY week DESC
+            """;
+
+    private static final String WEEKLY_ACTIVITY_POSTGRES_SQL = """
+            SELECT
+                to_char(p.created_at, 'YYYY-"W"IW') AS week,
                 COUNT(*) AS total_posts,
                 COALESCE(SUM(p.like_count), 0) AS total_likes,
                 COALESCE(SUM(p.comment_count), 0) AS total_comments
@@ -133,8 +145,9 @@ public class SqliteAnalyticsRepositoryAdapter implements AnalyticsRepository {
 
     @Override
     public List<WeeklyActivityStat> findWeeklyActivityByAuthor(UUID authorId) {
+        String sql = isPostgres() ? WEEKLY_ACTIVITY_POSTGRES_SQL : WEEKLY_ACTIVITY_SQLITE_SQL;
         return jdbcTemplate.query(
-                WEEKLY_ACTIVITY_SQL,
+                sql,
                 (rs, rowNum) -> new WeeklyActivityStat(
                         rs.getString("week") != null ? rs.getString("week") : "Unknown",
                         rs.getLong("total_posts"),
@@ -143,6 +156,19 @@ public class SqliteAnalyticsRepositoryAdapter implements AnalyticsRepository {
                 ),
                 authorId.toString()
         );
+    }
+
+    private boolean isPostgres() {
+        var dataSource = jdbcTemplate.getDataSource();
+        if (dataSource == null) {
+            return false;
+        }
+        try (var conn = dataSource.getConnection()) {
+            String product = conn.getMetaData().getDatabaseProductName();
+            return product != null && product.toLowerCase().contains("postgres");
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     @Override
