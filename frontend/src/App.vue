@@ -157,7 +157,38 @@
       <!-- Feed View -->
       <section v-else class="feed">
         <form @submit.prevent="createNewPost" class="card form composer">
-          <textarea v-model="composer.content" rows="3" placeholder="Share something..." required></textarea>
+          <textarea
+            v-model="composer.content"
+            rows="3"
+            placeholder="Share something..."
+            :disabled="funnyfying"
+            required
+          ></textarea>
+
+          <div class="funnyfy-toolbar">
+            <button
+              type="button"
+              class="funnyfy-btn"
+              @click="makeItFunnier"
+              :disabled="funnyfying || !composer.content.trim()"
+            >
+              <span v-if="funnyfying" class="btn-spinner" aria-hidden="true"></span>
+              <span>{{ funnyfying ? 'Making it funnier...' : 'Make It Funnier' }}</span>
+            </button>
+            <button
+              v-if="previousCaption !== null && !funnyfying"
+              type="button"
+              class="undo-funnyfy-btn"
+              @click="undoFunnyfy"
+            >
+              Undo
+            </button>
+          </div>
+
+          <div v-if="funnyfyError" class="funnyfy-error" role="alert">
+            <span>{{ funnyfyError }}</span>
+            <button type="button" class="dismiss-error-btn" @click="funnyfyError = ''" aria-label="Dismiss">&times;</button>
+          </div>
           
           <div class="media-input-group">
             <label class="file-upload-btn">
@@ -195,7 +226,7 @@
           </div>
 
           <div class="actions">
-            <button type="submit" :disabled="uploading">Post</button>
+            <button type="submit" :disabled="uploading || funnyfying">Post</button>
           </div>
         </form>
 
@@ -256,12 +287,16 @@
         </article>
       </section>
     </main>
+
+    <div v-if="funnyfyToast" class="toast-notification" role="status">
+      {{ funnyfyToast }}
+    </div>
   </div>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref, computed } from 'vue'
-import { createPost, fetchMe, listFeed, login, register as registerUser, toggleLike, listComments, addComment, fetchAnalytics } from './api'
+import { createPost, fetchMe, listFeed, login, register as registerUser, toggleLike, listComments, addComment, fetchAnalytics, funnyfyText } from './api'
 import { isVideoUrl } from './utils/mediaUtils'
 import { useMediaUpload } from './composables/useMediaUpload'
 
@@ -273,6 +308,13 @@ const authMode = ref('login')
 const error = ref('')
 const authForm = reactive({ username: '', email: '', password: '', usernameOrEmail: '' })
 const composer = reactive({ content: '', imageUrl: '' })
+
+// Funnyfy state
+const funnyfying = ref(false)
+const funnyfyError = ref('')
+const funnyfyToast = ref('')
+const previousCaption = ref(null)
+let toastTimer = null
 
 // Analytics state
 const analytics = ref(null)
@@ -399,10 +441,52 @@ async function submitComment(postId) {
   }
 }
 
+async function makeItFunnier() {
+  const currentText = composer.content.trim()
+  if (!currentText || funnyfying.value) return
+
+  funnyfying.value = true
+  funnyfyError.value = ''
+
+  try {
+    const result = await funnyfyText(currentText)
+    if (result && result.text) {
+      previousCaption.value = composer.content
+      composer.content = result.text
+      showFunnyfyToast('Your post just got funnier ✨')
+    }
+  } catch (e) {
+    funnyfyError.value =
+      e.response?.data?.detail ||
+      e.response?.data?.message ||
+      'Could not make your post funnier right now. Please check that LM Studio is running.'
+  } finally {
+    funnyfying.value = false
+  }
+}
+
+function undoFunnyfy() {
+  if (previousCaption.value !== null) {
+    composer.content = previousCaption.value
+    previousCaption.value = null
+    funnyfyError.value = ''
+  }
+}
+
+function showFunnyfyToast(message) {
+  funnyfyToast.value = message
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    funnyfyToast.value = ''
+  }, 3500)
+}
+
 async function createNewPost() {
   if (!composer.content.trim()) return
   await createPost({ content: composer.content, imageUrl: composer.imageUrl || null })
   composer.content = ''
+  previousCaption.value = null
+  funnyfyError.value = ''
   clearMedia()
   await loadFeed()
 }
@@ -849,5 +933,101 @@ async function logout() {
   border: none;
   padding: 0.4rem 1.1rem;
   border-radius: 999px;
+}
+
+.funnyfy-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.funnyfy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.funnyfy-btn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.funnyfy-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.undo-funnyfy-btn {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+  padding: 0.4rem 0.9rem !important;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.undo-funnyfy-btn:hover {
+  background: #e5e7eb !important;
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: funnyfy-spin 0.75s linear infinite;
+}
+
+@keyframes funnyfy-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.funnyfy-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+.dismiss-error-btn {
+  background: transparent !important;
+  color: #b91c1c !important;
+  border: none !important;
+  padding: 0 0.25rem !important;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast-notification {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: #111827;
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  box-shadow: 0 10px 25px rgba(17, 24, 39, 0.25);
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 1000;
 }
 </style>

@@ -36,6 +36,10 @@ notification:
     enabled: true
     base-url: https://ntfy.sh
     topic: instakill-notifications
+llm:
+  url: ${LOCAL_LLM_URL:http://localhost:12345/v1/chat/completions}
+  model: ${LOCAL_LLM_MODEL:google/gemma-3-270m-it}
+  timeout-seconds: ${LOCAL_LLM_TIMEOUT_SECONDS:120}
 logging:
   level:
     org.hibernate.SQL: warn

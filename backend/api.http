@@ -34,3 +34,11 @@ Cookie: ACCESS_TOKEN={{token}}
 ### Toggle like
 POST http://localhost:8080/api/posts/{{postId}}/likes/toggle
 Cookie: ACCESS_TOKEN={{token}}
+
+### Make caption funnier via local LLM (LM Studio)
+POST http://localhost:8080/api/funnyfy
+Content-Type: application/json
+
+{
+  "text": "Just had my morning coffee and ready to code."
+}

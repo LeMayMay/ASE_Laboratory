@@ -49,3 +49,7 @@ export function listComments(postId) {
 export function fetchAnalytics() {
   return client.get('/api/analytics').then(res => res.data)
 }
+
+export function funnyfyText(text) {
+  return client.post('/api/funnyfy', { text }).then(res => res.data)
+}

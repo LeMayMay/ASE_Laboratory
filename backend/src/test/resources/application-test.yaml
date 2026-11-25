@@ -22,3 +22,7 @@ media:
 notification:
   ntfy:
     enabled: false
+llm:
+  url: ${LOCAL_LLM_URL:http://localhost:12345/v1/chat/completions}
+  model: ${LOCAL_LLM_MODEL:google/gemma-3-270m-it}
+  timeout-seconds: 5

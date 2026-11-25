@@ -154,3 +154,74 @@ body {
     color: #ef4444;
     font-size: 0.85rem;
 }
+
+.funnyfy-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form .funnyfy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #fff;
+    border: none;
+    padding: 0.45rem 1.1rem;
+    border-radius: 999px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.form .funnyfy-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.form .undo-funnyfy-btn {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.btn-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: funnyfy-spin 0.75s linear infinite;
+}
+
+@keyframes funnyfy-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.funnyfy-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+}
+
+.toast-notification {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: #111827;
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 999px;
+    box-shadow: 0 10px 25px rgba(17, 24, 39, 0.25);
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 1000;
+}

@@ -7,8 +7,18 @@
         <form th:action="@{/posts}" th:object="${postForm}" method="post" class="form">
             <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <label>Content
-                <textarea th:field="*{content}" rows="4"></textarea>
+                <textarea id="post-content" th:field="*{content}" rows="4"></textarea>
             </label>
+            <div class="funnyfy-toolbar">
+                <button type="button" id="funnyfy-btn" class="funnyfy-btn">
+                    <span id="funnyfy-spinner" class="btn-spinner" style="display: none;"></span>
+                    <span id="funnyfy-label">Make It Funnier</span>
+                </button>
+                <button type="button" id="undo-funnyfy-btn" class="undo-funnyfy-btn" style="display: none;">
+                    Undo
+                </button>
+            </div>
+            <div id="funnyfy-error" class="funnyfy-error" style="display: none;" role="alert"></div>
             <div class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></div>
             <label>Image URL
                 <input type="text" th:field="*{imageUrl}" placeholder="https://..."/>
@@ -16,6 +26,80 @@
             <div class="error" th:if="${#fields.hasErrors('imageUrl')}" th:errors="*{imageUrl}"></div>
             <button type="submit">Publish</button>
         </form>
+        <div id="funnyfy-toast" class="toast-notification" style="display: none;" role="status">
+            Your post just got funnier ✨
+        </div>
+        <script>
+            (function () {
+                const textarea = document.getElementById('post-content');
+                const btn = document.getElementById('funnyfy-btn');
+                const spinner = document.getElementById('funnyfy-spinner');
+                const label = document.getElementById('funnyfy-label');
+                const undoBtn = document.getElementById('undo-funnyfy-btn');
+                const errorBox = document.getElementById('funnyfy-error');
+                const toast = document.getElementById('funnyfy-toast');
+                let previousText = null;
+                let toastTimer = null;
+
+                function showToast() {
+                    toast.style.display = 'block';
+                    if (toastTimer) clearTimeout(toastTimer);
+                    toastTimer = setTimeout(function () {
+                        toast.style.display = 'none';
+                    }, 3500);
+                }
+
+                btn.addEventListener('click', async function () {
+                    const current = textarea.value.trim();
+                    if (!current) {
+                        errorBox.textContent = 'Please write a caption first.';
+                        errorBox.style.display = 'block';
+                        return;
+                    }
+                    errorBox.style.display = 'none';
+                    btn.disabled = true;
+                    textarea.disabled = true;
+                    spinner.style.display = 'inline-block';
+                    label.textContent = 'Making it funnier...';
+
+                    try {
+                        const res = await fetch('/api/funnyfy', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ text: current })
+                        });
+                        const data = await res.json().catch(function () { return {}; });
+                        if (!res.ok) {
+                            throw new Error(data.detail || data.message || 'Could not make your post funnier right now.');
+                        }
+                        if (data.text) {
+                            previousText = textarea.value;
+                            textarea.value = data.text;
+                            undoBtn.style.display = 'inline-block';
+                            showToast();
+                        }
+                    } catch (err) {
+                        errorBox.textContent = err.message || 'Could not connect to local LLM.';
+                        errorBox.style.display = 'block';
+                    } finally {
+                        btn.disabled = false;
+                        textarea.disabled = false;
+                        spinner.style.display = 'none';
+                        label.textContent = 'Make It Funnier';
+                    }
+                });
+
+                undoBtn.addEventListener('click', function () {
+                    if (previousText !== null) {
+                        textarea.value = previousText;
+                        previousText = null;
+                        undoBtn.style.display = 'none';
+                        errorBox.style.display = 'none';
+                    }
+                });
+            })();
+        </script>
     </section>
 </div>
 </body>

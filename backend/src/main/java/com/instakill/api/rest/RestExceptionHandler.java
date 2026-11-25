@@ -4,6 +4,7 @@ import com.instakill.common.error.BadRequestException;
 import com.instakill.common.error.ConflictException;
 import com.instakill.common.error.ForbiddenException;
 import com.instakill.common.error.InstakillException;
+import com.instakill.common.error.LlmServiceException;
 import com.instakill.common.error.NotFoundException;
 import com.instakill.common.error.UnauthorizedException;
 import com.instakill.common.error.ValidationException;
@@ -44,7 +45,7 @@ public class RestExceptionHandler {
     }
 
     @ExceptionHandler({BadRequestException.class, ConflictException.class, NotFoundException.class,
-            UnauthorizedException.class, ForbiddenException.class})
+            UnauthorizedException.class, ForbiddenException.class, LlmServiceException.class})
     public ProblemDetail handleKnown(InstakillException ex) {
         HttpStatus status = switch (ex) {
             case BadRequestException ignored -> HttpStatus.BAD_REQUEST;
@@ -52,6 +53,7 @@ public class RestExceptionHandler {
             case NotFoundException ignored -> HttpStatus.NOT_FOUND;
             case UnauthorizedException ignored -> HttpStatus.UNAUTHORIZED;
             case ForbiddenException ignored -> HttpStatus.FORBIDDEN;
+            case LlmServiceException llmEx -> llmEx.status();
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
